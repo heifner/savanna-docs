@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Savanna Consensus: A Deep Technical Dive</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --accent5: #ffa657;
+    --gold: #e3b341;
+    --glow: rgba(88,166,255,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Spectral', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 17px;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #0a1628 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 40px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(88,166,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    opacity: 0.9;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #e6edf3 0%, var(--accent) 60%, var(--accent4) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .hero-subtitle {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-style: italic;
+    max-width: 700px;
+    margin: 0 auto 32px;
+  }
+
+  .hero-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta span { color: var(--accent2); }
+
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 28px 32px;
+    margin-bottom: 60px;
+    border-radius: 4px;
+  }
+
+  .toc h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .toc ol {
+    list-style: decimal;
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 32px;
+  }
+
+  .toc li { font-size: 14px; color: var(--text-muted); }
+  .toc a { color: var(--text-muted); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 64px 0 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    line-height: 1.2;
+  }
+
+  h2 .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 6px;
+    letter-spacing: 0.1em;
+  }
+
+  h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--accent4);
+    margin: 36px 0 14px;
+  }
+
+  h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent5);
+    margin: 24px 0 10px;
+    letter-spacing: 0.05em;
+  }
+
+  p { margin-bottom: 18px; }
+
+  strong { color: var(--text); font-weight: 600; }
+  em { color: var(--accent4); font-style: italic; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--accent5);
+  }
+
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent5);
+    padding: 20px 24px;
+    overflow-x: auto;
+    border-radius: 4px;
+    margin: 20px 0 28px;
+    line-height: 1.6;
+    color: #c9d1d9;
+  }
+
+  pre .kw { color: var(--accent4); }
+  pre .ty { color: var(--accent); }
+  pre .cm { color: var(--text-muted); font-style: italic; }
+  pre .st { color: var(--accent2); }
+  pre .nu { color: var(--accent5); }
+
+  .diagram-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px 24px 20px;
+    margin: 32px 0;
+    overflow-x: auto;
+  }
+
+  .diagram-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 16px;
+  }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--gold);
+    padding: 20px 24px;
+    margin: 28px 0;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .callout.info { border-left-color: var(--accent); }
+  .callout.warn { border-left-color: var(--accent3); }
+  .callout.success { border-left-color: var(--accent2); }
+
+  .callout-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    color: var(--gold);
+  }
+
+  .callout.info .callout-title { color: var(--accent); }
+  .callout.warn .callout-title { color: var(--accent3); }
+  .callout.success .callout-title { color: var(--accent2); }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0 32px;
+    font-size: 15px;
+  }
+
+  th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(48,54,61,0.6);
+    vertical-align: top;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .pill-green { background: rgba(63,185,80,0.15); color: var(--accent2); border: 1px solid rgba(63,185,80,0.3); }
+  .pill-red { background: rgba(247,129,102,0.15); color: var(--accent3); border: 1px solid rgba(247,129,102,0.3); }
+  .pill-blue { background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid rgba(88,166,255,0.3); }
+  .pill-purple { background: rgba(210,168,255,0.15); color: var(--accent4); border: 1px solid rgba(210,168,255,0.3); }
+
+  .footnote {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 48px 0;
+  }
+
+  footer {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 32px 40px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 600px) {
+    .content { padding: 40px 20px; }
+    .toc ol { grid-template-columns: 1fr; }
+    .hero { padding: 50px 24px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">Technical Deep Dive · Antelope / Wire Network</div>
+  <h1>Savanna Consensus</h1>
+  <p class="hero-subtitle">How Antelope achieved 1-second finality: BFT pipelining, BLS aggregate signatures, and the 2-chain rule</p>
+  <div class="hero-meta">
+    <span>Antelope Spring v1.0+</span>
+    <span>Wire-Sysio</span>
+    <span>BLS12-381 Cryptography</span>
+    <span>HotStuff-Derived</span>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="toc">
+    <h3>Table of Contents</h3>
+    <ol>
+      <li><a href="#background">Background &amp; Motivation</a></li>
+      <li><a href="#legacy">Legacy DPoS+BFT Consensus</a></li>
+      <li><a href="#hotstuff">HotStuff: The Inspiration</a></li>
+      <li><a href="#bls">BLS Aggregate Signatures</a></li>
+      <li><a href="#architecture">Savanna Architecture</a></li>
+      <li><a href="#voting">Voting: Strong, Weak &amp; QCs</a></li>
+      <li><a href="#pipelining">Pipelining &amp; 2-Chain Finality</a></li>
+      <li><a href="#safety">Safety Rules &amp; Finalizer State</a></li>
+      <li><a href="#impl">Implementation Deep Dive</a></li>
+      <li><a href="#ibc">IBC &amp; Cross-Chain Implications</a></li>
+      <li><a href="#future">Future Directions</a></li>
+      <li><a href="#comparison">Protocol Comparison</a></li>
+    </ol>
+  </div>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="background"><span class="section-num">§1</span>Background &amp; Motivation</h2>
+
+  <p><strong>Savanna</strong> — an acronym for <em>Scalable Agreement on Validated Additions with Nimble Nonrepudiating Attestation</em> — is the consensus algorithm introduced in Antelope Spring v1.0 (September 2024). It replaced the legacy DPoS+pipelined-BFT mechanism that had been in use since EOS mainnet launch in 2018, reducing transaction finality from roughly three minutes down to approximately <strong>one second</strong> under typical network conditions — a greater than 100× improvement.</p>
+
+  <p>The algorithm was led by Areg Hayrapetian (Director of Engineering, EOS Network Foundation), with a dedicated core team that carried the work from formal specification through to production deployment: <strong>Guillaume Babin-Tremblay</strong>, <strong>Kevin Heifner</strong>, <strong>Greg Popovitch</strong>, and <strong>Lin Huang</strong>. The work is evident across hundreds of commits in the AntelopeIO/spring repository — covering everything from the initial finality core design, through BLS integration, safety state persistence, vote threading, P2P protocol changes, and the exhaustive test suite that validated both Legacy and Savanna consensus modes. This was not a clean-room project; it was two years of design meetings, whiteboard sessions, formal proof work, and grinding integration of a fundamentally new consensus layer into a live, production codebase. The Wire Network's <code>wire-sysio</code> codebase is a fork of Antelope and inherits the same consensus mechanism.</p>
+
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-value">1s</div>
+      <div class="stat-label">Time to Finality</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">2</div>
+      <div class="stat-label">Blocks to Finality</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">&gt;100×</div>
+      <div class="stat-label">Improvement</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1.1ms</div>
+      <div class="stat-label">BLS Verification</div>
+    </div>
+  </div>
+
+  <p>The core problems that motivated Savanna were:</p>
+  <ul style="margin-bottom:18px; padding-left:24px; line-height:2;">
+    <li>The original algorithm allowed <strong>at most one confirmation per block</strong>, creating a fundamental throughput bottleneck for finality.</li>
+    <li>A 3-minute finality window was unusable for <strong>inter-blockchain communication (IBC)</strong>, bridges, and latency-sensitive applications.</li>
+    <li>The original design lacked formal mathematical safety proofs; it was engineered under deadline pressure.</li>
+    <li>The confirmation count approach didn't scale elegantly with larger validator sets.</li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="legacy"><span class="section-num">§2</span>Legacy DPoS + BFT Consensus</h2>
+
+  <p>Before Savanna, Antelope used a two-layer mechanism: <strong>Delegated Proof of Stake (DPoS)</strong> for block production scheduling, layered with a <strong>pipelined BFT</strong> mechanism for finality. Understanding the limitations of this approach is essential context for appreciating the Savanna design.</p>
+
+  <h3>The DPoS Block Production Rotation</h3>
+  <p>21 active Block Producers (BPs) are elected via token-holder votes. Each round, they take turns producing blocks in a deterministic schedule — each BP produces <strong>12 consecutive blocks</strong> (a 6-second slot), then hands off to the next. Blocks arrive every 0.5 seconds, and the schedule rotates every 21 × 12 = 252 blocks (~126 seconds).</p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 800 140" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:800px;display:block;margin:0 auto;">
+      <defs>
+        <linearGradient id="bp1g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#58a6ff" stop-opacity="0.7"/><stop offset="100%" stop-color="#58a6ff" stop-opacity="0.3"/></linearGradient>
+        <linearGradient id="bp2g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3fb950" stop-opacity="0.7"/><stop offset="100%" stop-color="#3fb950" stop-opacity="0.3"/></linearGradient>
+        <linearGradient id="bp3g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d2a8ff" stop-opacity="0.7"/><stop offset="100%" stop-color="#d2a8ff" stop-opacity="0.3"/></linearGradient>
+      </defs>
+      <!-- BP1 blocks 1-12 -->
+      <g>
+        <text x="5" y="30" fill="#8b949e" font-family="JetBrains Mono" font-size="10">BP-A</text>
+        <text x="5" y="80" fill="#8b949e" font-family="JetBrains Mono" font-size="10">BP-B</text>
+        <text x="5" y="130" fill="#8b949e" font-family="JetBrains Mono" font-size="10">BP-C</text>
+      </g>
+      <!-- BP-A produces 12 blocks -->
+      <rect x="50" y="14" width="228" height="28" rx="3" fill="url(#bp1g)" stroke="#58a6ff" stroke-width="1"/>
+      <text x="164" y="33" fill="#e6edf3" font-family="JetBrains Mono" font-size="11" text-anchor="middle">Blocks 1–12 (6s slot)</text>
+      <!-- individual block ticks -->
+      <line x1="69" y1="14" x2="69" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="88" y1="14" x2="88" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="107" y1="14" x2="107" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="126" y1="14" x2="126" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="145" y1="14" x2="145" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="164" y1="14" x2="164" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="183" y1="14" x2="183" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="202" y1="14" x2="202" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="221" y1="14" x2="221" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="240" y1="14" x2="240" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <line x1="259" y1="14" x2="259" y2="42" stroke="#1f6feb" stroke-width="0.5"/>
+      <!-- BP-B -->
+      <rect x="280" y="14" width="228" height="28" rx="3" fill="url(#bp2g)" stroke="#3fb950" stroke-width="1"/>
+      <text x="394" y="33" fill="#e6edf3" font-family="JetBrains Mono" font-size="11" text-anchor="middle">Blocks 13–24 (6s slot)</text>
+      <!-- BP-C -->
+      <rect x="510" y="14" width="228" height="28" rx="3" fill="url(#bp3g)" stroke="#d2a8ff" stroke-width="1"/>
+      <text x="624" y="33" fill="#e6edf3" font-family="JetBrains Mono" font-size="11" text-anchor="middle">Blocks 25–36 (6s slot)</text>
+      <!-- dots -->
+      <text x="750" y="33" fill="#8b949e" font-size="18">…</text>
+      <!-- finality bar -->
+      <rect x="50" y="60" width="460" height="16" rx="3" fill="rgba(247,129,102,0.15)" stroke="#f78166" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="280" y="72" fill="#f78166" font-family="JetBrains Mono" font-size="10" text-anchor="middle">Legacy: ~360 block confirmations needed → ~3 minutes to finality</text>
+      <!-- LIB arrow -->
+      <line x1="50" y1="90" x2="510" y2="90" stroke="#f78166" stroke-width="1" marker-end="url(#arr)"/>
+      <text x="40" y="94" fill="#8b949e" font-family="JetBrains Mono" font-size="9">LIB</text>
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#f78166"/>
+        </marker>
+      </defs>
+      <!-- Savanna bar -->
+      <rect x="50" y="108" width="38" height="16" rx="3" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1"/>
+      <text x="50" y="120" fill="#3fb950" font-family="JetBrains Mono" font-size="10">Savanna: 2 blocks → 1s</text>
+    </svg>
+    <div class="diagram-label">Figure 1 — DPoS block schedule vs. finality windows (legacy vs. Savanna)</div>
+  </div>
+
+  <h3>The Two-Round Confirmation Problem</h3>
+  <p>In the legacy system, a block reaching true irreversibility required <strong>two full rounds</strong> of supermajority confirmation — not one. In the first round, each BP piggybacks a <code>confirm_count</code> field in its own block header as it produces blocks, registering confirmations for recent blocks it has seen. A BP can only emit a confirmation when it is scheduled to produce — never out-of-band. Once ⌈2/3 × 21⌉ = 15 BPs have each confirmed a block, it advances to <strong>Proposed LIB (PLIB)</strong>. But that is only stage one. In the second round, the PLIB itself must then receive 2/3+1 confirmations before it graduates to the actual <strong>Last Irreversible Block (LIB)</strong>. With 21 BPs each producing 12-block slots, one full round of confirmations requires waiting for roughly 20 producers to cycle through their slots — approximately 240 blocks. Two rounds therefore compounded to a minimum gap of around 325 blocks between the chain head and LIB in good network conditions, and commonly over 360 in practice. At 0.5 seconds per block that works out to roughly 2.5–3 minutes. No amount of hardware or network improvement could break this ceiling — it was baked into the two-stage protocol structure itself.</p>
+
+  <div class="callout warn">
+    <div class="callout-title">⚠ The Bottleneck</div>
+    The two-stage confirmation design has two compounding constraints: confirmations can only be issued when a BP produces its own block, and the protocol demands two full supermajority rounds before a block is truly irreversible. The first round establishes a Proposed LIB; the second confirms it as actual LIB. This structure is fundamentally latency-bound by the 12-block slot schedule — no software optimization or faster hardware can shortcut it.
+  </div>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="hotstuff"><span class="section-num">§3</span>HotStuff: The Academic Foundation</h2>
+
+  <p>Savanna is explicitly inspired by the <strong>HotStuff</strong> BFT consensus algorithm, originally published by Yin et al. from VMware Research in 2018 and later used as the basis for Facebook's Diem (Libra) blockchain. Understanding HotStuff is essential to understanding Savanna.</p>
+
+  <h3>BFT Fundamentals</h3>
+  <p>Byzantine Fault Tolerant (BFT) consensus solves the problem of reaching agreement among <em>n</em> nodes where up to <em>f</em> may be arbitrarily faulty (Byzantine). The classical result: safety and liveness can both be guaranteed if and only if <strong>n ≥ 3f + 1</strong>, meaning fewer than one-third of nodes may be faulty. For 21 BPs, this means the system tolerates up to 6 faulty nodes while maintaining safety and liveness with 15 honest nodes forming a quorum.</p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:760px;display:block;margin:0 auto;">
+      <!-- Nodes: 21 circles, 6 red, 15 blue -->
+      <text x="10" y="20" fill="#8b949e" font-family="JetBrains Mono" font-size="11">n=21 Finalizers</text>
+      <text x="340" y="20" fill="#3fb950" font-family="JetBrains Mono" font-size="11">✓ 15 honest (quorum)</text>
+      <text x="580" y="20" fill="#f78166" font-family="JetBrains Mono" font-size="11">✗ up to 6 Byzantine</text>
+      <!-- Draw 21 nodes in a row -->
+      <g>
+        <!-- 15 honest -->
+        <circle cx="30" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="65" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="100" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="135" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="170" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="205" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="240" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="275" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="310" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="345" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="380" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="415" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="450" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="485" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <circle cx="520" cy="80" r="15" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+        <!-- 6 Byzantine -->
+        <circle cx="590" cy="80" r="15" fill="rgba(247,129,102,0.2)" stroke="#f78166" stroke-width="1.5"/>
+        <circle cx="625" cy="80" r="15" fill="rgba(247,129,102,0.2)" stroke="#f78166" stroke-width="1.5"/>
+        <circle cx="660" cy="80" r="15" fill="rgba(247,129,102,0.2)" stroke="#f78166" stroke-width="1.5"/>
+        <circle cx="695" cy="80" r="15" fill="rgba(247,129,102,0.2)" stroke="#f78166" stroke-width="1.5"/>
+        <circle cx="730" cy="80" r="15" fill="rgba(247,129,102,0.2)" stroke="#f78166" stroke-width="1.5"/>
+        <circle cx="555" cy="80" r="15" fill="rgba(247,129,102,0.2)" stroke="#f78166" stroke-width="1.5"/>
+      </g>
+      <!-- Quorum bracket -->
+      <line x1="30" y1="108" x2="520" y2="108" stroke="#3fb950" stroke-width="1.5"/>
+      <line x1="30" y1="102" x2="30" y2="114" stroke="#3fb950" stroke-width="1.5"/>
+      <line x1="520" y1="102" x2="520" y2="114" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="275" y="128" fill="#3fb950" font-family="JetBrains Mono" font-size="11" text-anchor="middle">Quorum = ⌈2/3 × 21⌉ = 15 signatures needed</text>
+      <!-- Safety rule text -->
+      <text x="380" y="170" fill="#8b949e" font-family="Spectral" font-size="13" text-anchor="middle" font-style="italic">n ≥ 3f+1  →  Safety &amp; Liveness with f Byzantine nodes</text>
+    </svg>
+    <div class="diagram-label">Figure 2 — BFT quorum for 21 finalizers: 15 of 21 required</div>
+  </div>
+
+  <h3>HotStuff Innovations</h3>
+  <p>Classical BFT protocols like PBFT require O(n²) message complexity during view changes, making them impractical beyond ~100 nodes. HotStuff solved this by introducing:</p>
+
+  <ul style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li><strong>Linearity</strong>: O(n) messages per round, not O(n²), achieved via threshold signatures where the leader aggregates votes into a single quorum certificate.</li>
+    <li><strong>Pipelining</strong>: Multiple consensus rounds proceed concurrently in a chain, so the leader is perpetually proposing without waiting for full round-trip consensus.</li>
+    <li><strong>Simplified view changes</strong>: The new-view mechanism is itself a pipeline phase, not a separate expensive subprotocol.</li>
+    <li><strong>Chained QCs</strong>: Each block carries a QC for the previous block, creating a self-certifying chain where finality proof is embedded in the structure.</li>
+  </ul>
+
+  <h3>From HotStuff to Savanna</h3>
+  <p>Savanna takes HotStuff's conceptual architecture and adapts it to the DPoS block-based chain model of Antelope. Key differences from vanilla HotStuff include:</p>
+
+  <ul style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li>Instead of abstract "views," Savanna operates on the existing Antelope block slot model (0.5-second blocks, 21-BP rotation).</li>
+    <li>Savanna uses a <strong>2-chain finality rule</strong> (similar to HotStuff-2) rather than the 3-chain rule in the original HotStuff paper.</li>
+    <li>It introduces a <strong>strong/weak vote distinction</strong> to handle liveness after forks without sacrificing safety.</li>
+    <li>Block production (proposing) and finalization are kept as logically separate concerns, even though the same set of 21 BPs initially fills both roles.</li>
+    <li>In Antelope Spring, finality data is embedded in block headers as an <strong>instant finality extension</strong> to maintain backward compatibility with the existing block format. In Wire (<code>wire-sysio</code>), this compatibility constraint didn't apply — finality data is a first-class field of the block structure itself, no extension mechanism needed.</li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="bls"><span class="section-num">§4</span>BLS Aggregate Signatures</h2>
+
+  <p>A critical enabling technology for Savanna's O(n) message complexity is <strong>BLS (Boneh-Lynn-Shacham) signature aggregation</strong> over the <strong>BLS12-381</strong> pairing-friendly elliptic curve. Without this, collecting 15 individual ECDSA signatures and broadcasting them would generate significant network overhead.</p>
+
+  <h3>How BLS Aggregation Works</h3>
+  <p>In BLS, a signature on message <em>m</em> under private key <em>sk</em> is: <code>σ = sk · H(m)</code> where <em>H</em> maps to a point on the curve. The remarkable property is that multiple signatures can be combined into one aggregate: <code>σ_agg = σ₁ + σ₂ + … + σₙ</code>, and the aggregate is verified against the sum of public keys: <code>e(σ_agg, G) = e(H(m), PK₁ + PK₂ + … + PKₙ)</code>.</p>
+
+  <p>This means a <strong>Quorum Certificate (QC)</strong> can be represented as:</p>
+  <ul style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li>A single 96-byte aggregate BLS signature.</li>
+    <li>A bitset (bitmask) of which finalizers contributed — for 21 BPs, just 3 bytes.</li>
+    <li>The block hash being certified.</li>
+  </ul>
+
+  <p>This is an <strong>O(1) representation of n-party agreement</strong>. Verification takes approximately 1.1 milliseconds on modern hardware, as measured in the Spring implementation. Compare this to the cost of verifying 15 separate ECDSA signatures (~15 × 60μs ≈ 900μs) plus the transmission overhead.</p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:760px;display:block;margin:0 auto;">
+      <!-- 15 signatures on left -->
+      <text x="10" y="20" fill="#8b949e" font-family="JetBrains Mono" font-size="11">Individual votes (15 × 96B)</text>
+      <g>
+        <rect x="10" y="30" width="60" height="14" rx="2" fill="rgba(88,166,255,0.15)" stroke="#58a6ff" stroke-width="0.8"/>
+        <text x="40" y="41" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">sig₁</text>
+        <rect x="75" y="30" width="60" height="14" rx="2" fill="rgba(88,166,255,0.15)" stroke="#58a6ff" stroke-width="0.8"/>
+        <text x="105" y="41" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">sig₂</text>
+        <rect x="140" y="30" width="60" height="14" rx="2" fill="rgba(88,166,255,0.15)" stroke="#58a6ff" stroke-width="0.8"/>
+        <text x="170" y="41" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">sig₃</text>
+        <text x="220" y="41" fill="#8b949e" font-family="JetBrains Mono" font-size="12">…</text>
+        <rect x="240" y="30" width="60" height="14" rx="2" fill="rgba(88,166,255,0.15)" stroke="#58a6ff" stroke-width="0.8"/>
+        <text x="270" y="41" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">sig₁₅</text>
+      </g>
+      <!-- Arrow pointing right -->
+      <line x1="320" y1="37" x2="390" y2="37" stroke="#3fb950" stroke-width="1.5" marker-end="url(#greenarr)"/>
+      <text x="355" y="30" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="middle">BLS</text>
+      <text x="355" y="50" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="middle">aggregate</text>
+      <!-- Result -->
+      <rect x="400" y="20" width="200" height="34" rx="3" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="500" y="37" fill="#3fb950" font-family="JetBrains Mono" font-size="11" text-anchor="middle">QC: σ_agg (96B) + bitmask</text>
+      <!-- Defs -->
+      <defs>
+        <marker id="greenarr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+        </marker>
+      </defs>
+
+      <!-- Size comparison bar chart -->
+      <text x="10" y="95" fill="#8b949e" font-family="JetBrains Mono" font-size="11">Payload Size Comparison</text>
+      <!-- 15 ECDSA: 15 * 64 = 960B -->
+      <rect x="10" y="108" width="480" height="22" rx="2" fill="rgba(247,129,102,0.2)" stroke="#f78166" stroke-width="1"/>
+      <text x="250" y="123" fill="#f78166" font-family="JetBrains Mono" font-size="11" text-anchor="middle">15 ECDSA signatures: 960 bytes</text>
+      <!-- BLS aggregate: 96 + 3 = ~100B -->
+      <rect x="10" y="138" width="48" height="22" rx="2" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1"/>
+      <text x="200" y="153" fill="#3fb950" font-family="JetBrains Mono" font-size="11">BLS aggregate QC: ~100 bytes (10× smaller)</text>
+
+      <text x="10" y="188" fill="#8b949e" font-family="JetBrains Mono" font-size="11" font-style="italic">Verification: 1.1ms for BLS aggregate vs ~1.5ms for 15 ECDSA checks</text>
+    </svg>
+    <div class="diagram-label">Figure 3 — BLS aggregate signature efficiency for quorum certificates</div>
+  </div>
+
+  <h3>BLS12-381 in Practice</h3>
+  <p>Antelope uses the BLS12-381 curve, the same curve used by Ethereum 2.0 beacon chain validators. The curve offers ~128-bit security, efficient pairing operations for aggregation, and a rich ecosystem of implementations. In the Spring codebase, BLS operations are implemented via a custom submodule (<code>bn256</code>), with host functions exposed to WASM smart contracts via the CDT.</p>
+
+  <p>Each finalizer registers a BLS public key on-chain via the <code>regfinkey</code> action, and activates it via <code>actfinkey</code>. The finalizer's node signs votes using the corresponding private key, stored locally in the <code>finalizers/safety.dat</code> file.</p>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="architecture"><span class="section-num">§5</span>Savanna Architecture</h2>
+
+  <h3>Two Planes: Proposing vs. Finalizing</h3>
+  <p>Savanna cleanly separates two concerns that were entangled in the legacy protocol:</p>
+
+  <ol style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li><strong>Block Proposers</strong>: Produce and broadcast new blocks. They follow the DPoS rotation schedule, pack transactions, and include any available Quorum Certificates in the block header. In Spring v1.0, all 21 BPs are proposers.</li>
+    <li><strong>Block Finalizers</strong>: Evaluate proposed blocks, check safety rules, and emit signed votes. When a proposer aggregates enough votes into a QC, that QC gets embedded in the next block, advancing the finality chain.</li>
+  </ol>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:760px;display:block;margin:0 auto;">
+      <defs>
+        <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#58a6ff"/>
+        </marker>
+        <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+        </marker>
+        <marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#d2a8ff"/>
+        </marker>
+      </defs>
+
+      <!-- BP/Proposer box -->
+      <rect x="10" y="30" width="200" height="80" rx="6" fill="rgba(88,166,255,0.08)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="110" y="56" fill="#58a6ff" font-family="Syne" font-size="14" font-weight="600" text-anchor="middle">Block Proposer</text>
+      <text x="110" y="74" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">DPoS rotation schedule</text>
+      <text x="110" y="88" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">packs txns, includes QC</text>
+      <text x="110" y="102" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">broadcasts block</text>
+
+      <!-- Finalizer box -->
+      <rect x="270" y="30" width="200" height="80" rx="6" fill="rgba(63,185,80,0.08)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="370" y="56" fill="#3fb950" font-family="Syne" font-size="14" font-weight="600" text-anchor="middle">Block Finalizer</text>
+      <text x="370" y="74" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">BLS keypair</text>
+      <text x="370" y="88" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">validates block, checks rules</text>
+      <text x="370" y="102" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">emits signed vote</text>
+
+      <!-- Network/P2P box -->
+      <rect x="530" y="30" width="200" height="80" rx="6" fill="rgba(210,168,255,0.08)" stroke="#d2a8ff" stroke-width="1.5"/>
+      <text x="630" y="56" fill="#d2a8ff" font-family="Syne" font-size="14" font-weight="600" text-anchor="middle">P2P / net_plugin</text>
+      <text x="630" y="74" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">gossips votes to proposer</text>
+      <text x="630" y="88" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">propagates blocks &amp; QCs</text>
+      <text x="630" y="102" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">vote_threads pool</text>
+
+      <!-- Arrows -->
+      <line x1="210" y1="70" x2="268" y2="70" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <text x="239" y="63" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">block</text>
+
+      <line x1="470" y1="70" x2="528" y2="70" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <text x="499" y="63" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="middle">votes</text>
+
+      <line x1="630" y1="112" x2="630" y2="155" stroke="#d2a8ff" stroke-width="1.5"/>
+      <line x1="630" y1="155" x2="112" y2="155" stroke="#d2a8ff" stroke-width="1.5"/>
+      <line x1="112" y1="155" x2="112" y2="112" stroke="#d2a8ff" stroke-width="1.5" marker-end="url(#arr4)"/>
+      <text x="372" y="148" fill="#d2a8ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">QC aggregated → included in next block header</text>
+
+      <!-- Block with QC box -->
+      <rect x="200" y="185" width="360" height="70" rx="6" fill="rgba(227,179,65,0.08)" stroke="#e3b341" stroke-width="1.5"/>
+      <text x="380" y="208" fill="#e3b341" font-family="Syne" font-size="13" font-weight="700" text-anchor="middle">Block Nₖ</text>
+      <text x="380" y="226" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">header { producer, timestamp, txns_root, ... }</text>
+      <text x="380" y="242" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">instant_finality_extension { QC for Nₖ₋₁ }</text>
+    </svg>
+    <div class="diagram-label">Figure 4 — Savanna two-plane architecture: proposers, finalizers, and QC flow</div>
+  </div>
+
+  <h3>The Finalizer Policy</h3>
+  <p>The active set of finalizers is governed by a <strong>finalizer policy</strong> stored on-chain. This is a distinct concept from the DPoS proposer schedule. In Spring v1.0, the active and pending finalizer policies must both reach quorum before a QC is valid during a policy transition — preventing finality violations during handoffs.</p>
+
+  <p>The key data structures from the Spring codebase:</p>
+
+  <pre><span class="cm">// libraries/chain/include/eosio/chain/finality/finalizer_policy.hpp</span>
+<span class="kw">struct</span> <span class="ty">finalizer_authority</span> {
+    <span class="ty">std::string</span>    description;  <span class="cm">// human-readable name</span>
+    <span class="ty">uint64_t</span>       weight;       <span class="cm">// voting weight</span>
+    <span class="ty">bls_public_key</span> public_key;  <span class="cm">// BLS12-381 pubkey</span>
+};
+
+<span class="kw">struct</span> <span class="ty">finalizer_policy</span> {
+    <span class="ty">uint32_t</span>                            generation;   <span class="cm">// policy version</span>
+    <span class="ty">uint64_t</span>                            threshold;    <span class="cm">// quorum weight</span>
+    <span class="ty">std::vector&lt;finalizer_authority&gt;</span>    finalizers;  <span class="cm">// up to 64K</span>
+};
+
+<span class="cm">// A Quorum Certificate embedded in each block header</span>
+<span class="kw">struct</span> <span class="ty">quorum_certificate</span> {
+    <span class="ty">uint32_t</span>          block_num;     <span class="cm">// block being certified</span>
+    <span class="ty">vote_bitset</span>       active_votes;  <span class="cm">// which finalizers voted</span>
+    <span class="ty">bls_signature</span>     agg_sig;      <span class="cm">// aggregate BLS signature</span>
+};</pre>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="voting"><span class="section-num">§6</span>Voting: Strong Votes, Weak Votes, and QCs</h2>
+
+  <p>One of Savanna's most subtle and important innovations is the distinction between <strong>strong votes</strong> and <strong>weak votes</strong>. This mechanism elegantly handles the tension between safety and liveness in the presence of network partitions and chain forks.</p>
+
+  <h3>Strong Votes</h3>
+  <p>A finalizer casts a <strong>strong vote</strong> when three conditions hold: the monotony check passes (block timestamp is after the last vote), the liveness check passes (<code>B.latest_qc_block_timestamp > fsi.lock.timestamp</code> — the QC embedded in the block is more recent than the lock), and the embedded QC has "caught up" past the finalizer's own last vote (<code>fsi.last_vote.timestamp ≤ B.latest_qc_block_timestamp</code>). The last condition ensures the network has acknowledged the finalizer's prior vote before it commits again, preventing equivocation.</p>
+
+  <p>Strong votes contribute to <strong>Strong Quorum Certificates (Strong QC)</strong>. A Strong QC on block B₁ means ≥2f+1 finalizers have strongly committed to B₁'s ancestry. The critical safety property: if a Strong QC exists on block B, no conflicting block at the same height can ever achieve a Strong QC — this directly underpins the safety proof.</p>
+
+  <h3>Weak Votes</h3>
+  <p>A <strong>weak vote</strong> is cast on a <em>new</em> block when a finalizer can vote but the conditions for a strong vote are not met. An important constraint first: the monotony check (<code>B.timestamp > fsi.last_vote.timestamp</code>) is strict — once a finalizer has voted on a block (strongly or weakly), it <strong>cannot vote on that same block again</strong>. Weak votes are therefore always cast on a <em>different, later</em> block, not on a block previously voted strong.</p>
+
+  <p>The typical weak-vote scenario is a chain reorganization: the finalizer previously voted strong on a block on fork A, then sees a new block on fork B. The liveness check may pass (fork B's QC is more recent than the lock), but because the finalizer's <code>last_vote</code> timestamp is ahead of fork B's embedded QC timestamp, it cannot vote strongly yet. Rather than abstain and stall liveness, the finalizer votes weakly on the new block, signalling "I acknowledge this block as a candidate without fully committing to its ancestry."</p>
+
+  <p>Crucially, when a finalizer switches branches it records <code>fsi.other_branch_latest_time = fsi.last_vote.timestamp</code>. Subsequent votes on the new branch remain weak until the embedded QC catches up past that recorded timestamp, at which point strong voting resumes. This prevents a window where a strong QC could form on two competing forks simultaneously.</p>
+
+  <p>Weak votes allow the protocol to maintain <strong>liveness</strong> (keep producing QCs, keep high_qc advancing) during chain reorganizations without ever violating safety invariants.</p>
+
+  <p>A block can receive a <strong>Weak QC</strong> from 2f+1 weak (or mixed strong+weak) votes. A Weak QC advances the <em>high_qc pointer</em> but does <em>not</em> by itself trigger LIB advancement — a Strong QC in the chain is required for that.</p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 760 235" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:760px;display:block;margin:0 auto;">
+      <defs>
+        <marker id="sa" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+        </marker>
+        <marker id="wa" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#ffa657"/>
+        </marker>
+      </defs>
+
+      <!-- Chain fork scenario -->
+      <text x="10" y="18" fill="#8b949e" font-family="JetBrains Mono" font-size="11">Chain Fork Recovery Scenario</text>
+
+      <!-- B₅ — common prefix, vertically centred between the two forks -->
+      <rect x="10" y="70" width="80" height="30" rx="4" fill="rgba(88,166,255,0.15)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="50" y="89" fill="#e6edf3" font-family="JetBrains Mono" font-size="11" text-anchor="middle">B₅</text>
+
+      <!-- Fork A (top) — 60 px above B₅ centre -->
+      <line x1="90" y1="85" x2="120" y2="45" stroke="#3fb950" stroke-width="1.5"/>
+      <rect x="120" y="25" width="80" height="36" rx="4" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="160" y="44" fill="#3fb950" font-family="JetBrains Mono" font-size="11" text-anchor="middle">B₆a</text>
+      <text x="160" y="56" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">strong QC</text>
+
+      <!-- Fork B (bottom) — 60 px below B₅ centre -->
+      <line x1="90" y1="85" x2="120" y2="125" stroke="#ffa657" stroke-width="1.5"/>
+      <rect x="120" y="110" width="80" height="36" rx="4" fill="rgba(255,166,87,0.15)" stroke="#ffa657" stroke-width="1.5"/>
+      <text x="160" y="130" fill="#ffa657" font-family="JetBrains Mono" font-size="11" text-anchor="middle">B₆b</text>
+      <text x="160" y="142" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">orphaned</text>
+
+      <!-- B₇ — continues from B₆a, re-joins main line at B₅ vertical centre -->
+      <line x1="200" y1="43" x2="240" y2="75" stroke="#3fb950" stroke-width="1.5" marker-end="url(#sa)"/>
+      <rect x="240" y="60" width="80" height="30" rx="4" fill="rgba(63,185,80,0.2)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="280" y="79" fill="#3fb950" font-family="JetBrains Mono" font-size="11" text-anchor="middle">B₇</text>
+
+      <!-- Vote Type Rules box (right side) -->
+      <rect x="370" y="14" width="380" height="175" rx="6" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+      <text x="560" y="36" fill="#e6edf3" font-family="Syne" font-size="13" font-weight="600" text-anchor="middle">Vote Type Decision</text>
+
+      <!-- Strong vote -->
+      <rect x="385" y="48" width="12" height="12" rx="2" fill="rgba(63,185,80,0.3)" stroke="#3fb950" stroke-width="1"/>
+      <text x="405" y="59" fill="#3fb950" font-family="JetBrains Mono" font-size="10">Strong Vote</text>
+      <text x="405" y="74" fill="#8b949e" font-family="JetBrains Mono" font-size="9">liveness check passes AND</text>
+      <text x="405" y="87" fill="#8b949e" font-family="JetBrains Mono" font-size="9">QC timestamp ≥ last_vote timestamp</text>
+
+      <!-- Divider -->
+      <line x1="385" y1="103" x2="740" y2="103" stroke="var(--border)" stroke-width="1"/>
+
+      <!-- Weak vote -->
+      <rect x="385" y="118" width="12" height="12" rx="2" fill="rgba(255,166,87,0.3)" stroke="#ffa657" stroke-width="1"/>
+      <text x="405" y="129" fill="#ffa657" font-family="JetBrains Mono" font-size="10">Weak Vote  (always on a new, later block)</text>
+      <text x="405" y="145" fill="#8b949e" font-family="JetBrains Mono" font-size="9">liveness passes but QC hasn't caught up past last_vote, OR</text>
+      <text x="405" y="158" fill="#8b949e" font-family="JetBrains Mono" font-size="9">liveness fails but block extends lock  |  never re-votes a prior block</text>
+
+      <!-- Outcome text (bottom-left, below the fork diagram) -->
+      <text x="10" y="168" fill="#8b949e" font-family="JetBrains Mono" font-size="10">≥15 strong votes on B₇ → Strong QC → LIB advances (2-chain)</text>
+      <text x="10" y="186" fill="#8b949e" font-family="JetBrains Mono" font-size="10">Mixed strong+weak → Weak QC → high_qc advances, LIB holds</text>
+      <text x="10" y="204" fill="#8b949e" font-family="JetBrains Mono" font-size="10">After B₈ with Strong QC → 2-chain rule fires → LIB = B₇</text>
+    </svg>
+    <div class="diagram-label">Figure 5 — Strong vs. weak votes during chain fork recovery</div>
+  </div>
+
+  <h3>QC Types and Their Effects</h3>
+
+  <table>
+    <thead>
+      <tr><th>QC Type</th><th>Votes Required</th><th>Effect on high_qc</th><th>Effect on LIB</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="pill pill-green">Strong QC</span></td>
+        <td>≥2f+1 strong votes</td>
+        <td>Advances to this block</td>
+        <td>Advances (with 2-chain rule)</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-purple">Weak QC</span></td>
+        <td>≥2f+1 total (any mix)</td>
+        <td>Advances to this block</td>
+        <td>Does not advance</td>
+      </tr>
+      <tr>
+        <td><span class="pill pill-red">No QC</span></td>
+        <td>—</td>
+        <td>No change</td>
+        <td>No change</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="pipelining"><span class="section-num">§7</span>Pipelining &amp; the 2-Chain Finality Rule</h2>
+
+  <p>The heart of Savanna's 1-second finality is its <strong>pipelined 2-chain rule</strong>. Instead of waiting for a full round-trip QC before moving to the next block, multiple rounds execute concurrently like an assembly line. A block becomes final once there is a chain of two strong QCs extending from it.</p>
+
+  <h3>The 2-Chain Rule Explained</h3>
+  <p>Formally: block B is considered <strong>final</strong> (irreversible) when there exists a chain B → B₁ → B₂ such that:</p>
+  <ol style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li>B₁ contains a <em>Strong QC on B</em> in its header.</li>
+    <li>B₂ contains a <em>Strong QC on B₁</em> in its header.</li>
+  </ol>
+  <p>The moment a node sees B₂ with a valid Strong QC on B₁, it can conclusively declare B (and all blocks before it) as irreversible. With 0.5-second blocks, this takes a minimum of <strong>2 block slots = 1 second</strong>.</p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:760px;display:block;margin:0 auto;">
+      <defs>
+        <marker id="ba" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#30363d"/>
+        </marker>
+        <marker id="qa" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+        </marker>
+        <marker id="fa" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#e3b341"/>
+        </marker>
+      </defs>
+
+      <!-- Timeline axis -->
+      <text x="10" y="20" fill="#8b949e" font-family="JetBrains Mono" font-size="11">Time →  (0.5s per block)</text>
+
+      <!-- 5 blocks -->
+      <!-- Block N -->
+      <rect x="20" y="35" width="100" height="50" rx="5" fill="rgba(88,166,255,0.12)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="70" y="57" fill="#e6edf3" font-family="Syne" font-size="15" font-weight="700" text-anchor="middle">Bₙ</text>
+      <text x="70" y="75" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">t=0s</text>
+
+      <!-- Block N+1 (contains QC on Bₙ) -->
+      <rect x="150" y="35" width="100" height="50" rx="5" fill="rgba(88,166,255,0.12)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="200" y="52" fill="#e6edf3" font-family="Syne" font-size="14" font-weight="700" text-anchor="middle">Bₙ₊₁</text>
+      <rect x="155" y="58" width="90" height="16" rx="2" fill="rgba(63,185,80,0.25)" stroke="#3fb950" stroke-width="0.8"/>
+      <text x="200" y="69" fill="#3fb950" font-family="JetBrains Mono" font-size="8" text-anchor="middle">Strong QC on Bₙ</text>
+      <text x="200" y="94" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">t=0.5s</text>
+
+      <!-- Block N+2 (contains QC on Bₙ₊₁ → Bₙ becomes final!) -->
+      <rect x="280" y="35" width="100" height="50" rx="5" fill="rgba(227,179,65,0.12)" stroke="#e3b341" stroke-width="2"/>
+      <text x="330" y="52" fill="#e6edf3" font-family="Syne" font-size="14" font-weight="700" text-anchor="middle">Bₙ₊₂</text>
+      <rect x="285" y="58" width="90" height="16" rx="2" fill="rgba(63,185,80,0.25)" stroke="#3fb950" stroke-width="0.8"/>
+      <text x="330" y="69" fill="#3fb950" font-family="JetBrains Mono" font-size="8" text-anchor="middle">Strong QC on Bₙ₊₁</text>
+      <text x="330" y="94" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">t=1.0s</text>
+
+      <!-- Block N+3 -->
+      <rect x="410" y="35" width="100" height="50" rx="5" fill="rgba(88,166,255,0.08)" stroke="#30363d" stroke-width="1.5"/>
+      <text x="460" y="57" fill="#8b949e" font-family="Syne" font-size="14" font-weight="600" text-anchor="middle">Bₙ₊₃</text>
+      <text x="460" y="94" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">t=1.5s</text>
+
+      <!-- Block N+4 -->
+      <rect x="540" y="35" width="100" height="50" rx="5" fill="rgba(88,166,255,0.08)" stroke="#30363d" stroke-width="1.5"/>
+      <text x="590" y="57" fill="#8b949e" font-family="Syne" font-size="14" font-weight="600" text-anchor="middle">Bₙ₊₄</text>
+      <text x="590" y="94" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">t=2.0s</text>
+
+      <!-- Chain arrows -->
+      <line x1="120" y1="60" x2="148" y2="60" stroke="#30363d" stroke-width="1.5" marker-end="url(#ba)"/>
+      <line x1="250" y1="60" x2="278" y2="60" stroke="#30363d" stroke-width="1.5" marker-end="url(#ba)"/>
+      <line x1="380" y1="60" x2="408" y2="60" stroke="#30363d" stroke-width="1.5" marker-end="url(#ba)"/>
+      <line x1="510" y1="60" x2="538" y2="60" stroke="#30363d" stroke-width="1.5" marker-end="url(#ba)"/>
+
+      <!-- Finality arrow: symmetric arc from bottom of Bₙ₊₂ to bottom of Bₙ -->
+      <path d="M 330 87 Q 200 128 70 87" stroke="#e3b341" stroke-width="2" fill="none" stroke-dasharray="5,3" marker-end="url(#fa)"/>
+      <!-- Label below the arc, clear of the LIB box -->
+      <text x="200" y="148" fill="#e3b341" font-family="JetBrains Mono" font-size="10" text-anchor="middle">2-chain rule: Bₙ is FINAL when Bₙ₊₂ has Strong QC on Bₙ₊₁</text>
+
+      <!-- LIB marker: sits below the label -->
+      <rect x="20" y="156" width="100" height="22" rx="3" fill="rgba(227,179,65,0.2)" stroke="#e3b341" stroke-width="1.5"/>
+      <text x="70" y="171" fill="#e3b341" font-family="JetBrains Mono" font-size="10" text-anchor="middle">LIB = Bₙ</text>
+
+      <!-- Pipeline view -->
+      <text x="10" y="200" fill="#8b949e" font-family="JetBrains Mono" font-size="11">Pipeline: concurrent finality stages</text>
+      <!-- Stage labels -->
+      <rect x="20" y="213" width="100" height="20" rx="3" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1"/>
+      <text x="70" y="227" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="middle">PROPOSE Bₙ₊₃</text>
+
+      <rect x="150" y="213" width="100" height="20" rx="3" fill="rgba(88,166,255,0.15)" stroke="#58a6ff" stroke-width="1"/>
+      <text x="200" y="227" fill="#58a6ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">VOTE Bₙ₊₂</text>
+
+      <rect x="280" y="213" width="100" height="20" rx="3" fill="rgba(210,168,255,0.15)" stroke="#d2a8ff" stroke-width="1"/>
+      <text x="330" y="227" fill="#d2a8ff" font-family="JetBrains Mono" font-size="9" text-anchor="middle">AGGREGATE Bₙ₊₁</text>
+
+      <rect x="410" y="213" width="100" height="20" rx="3" fill="rgba(227,179,65,0.15)" stroke="#e3b341" stroke-width="1"/>
+      <text x="460" y="227" fill="#e3b341" font-family="JetBrains Mono" font-size="9" text-anchor="middle">FINALIZE Bₙ</text>
+
+      <text x="10" y="262" fill="#8b949e" font-family="Spectral" font-size="14" font-style="italic">Each block slot simultaneously advances four pipeline stages — this is why 1s finality is achievable.</text>
+    </svg>
+    <div class="diagram-label">Figure 6 — 2-chain finality rule and pipelined execution</div>
+  </div>
+
+  <h3>Why 2-Chain and Not 3-Chain?</h3>
+  <p>The original HotStuff paper uses a <strong>3-chain rule</strong> for commit, primarily to avoid a liveness edge-case involving view changes. Savanna uses 2-chain finality (inspired by HotStuff-2 work) because:</p>
+  <ul style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li>The strong/weak vote distinction handles the safety concern that the 3rd phase was meant to address in classical HotStuff.</li>
+    <li>Reducing from 3 to 2 chain steps cuts the finality time from ~1.5s to ~1.0s under the 0.5s block schedule.</li>
+    <li>The formal safety proof still holds: it was verified mathematically, as confirmed by the Savanna team.</li>
+  </ul>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="safety"><span class="section-num">§8</span>Safety Rules &amp; Finalizer State Machine</h2>
+
+  <p>Each finalizer is a state machine whose transitions must follow strict rules to preserve safety. The state is persisted in <code>finalizers/safety.dat</code>, a file that must never be lost or corrupted. This is the "safety ground truth" — it encodes exactly what the finalizer has previously committed to, ensuring it never violates its own past promises.</p>
+
+  <h3>Core Finalizer State Variables</h3>
+
+  <pre><span class="cm">// Actual finalizer safety state (finalizer.hpp / finalizer.cpp in Spring/wire-sysio)</span>
+<span class="kw">struct</span> <span class="ty">finalizer_safety_information</span> {
+    <span class="ty">block_ref</span>            last_vote;               <span class="cm">// block_id + timestamp of the last block voted on</span>
+    <span class="ty">block_ref</span>            lock;                    <span class="cm">// block we are currently locked on</span>
+    <span class="ty">block_timestamp_type</span> other_branch_latest_time; <span class="cm">// timestamp of last vote cast on a different branch</span>
+                                                  <span class="cm">// (cleared on every strong vote)</span>
+};</pre>
+
+  <h3>The Voting Decision: Three Checks in Order</h3>
+  <p>Before casting any vote on block B, a finalizer runs three checks in sequence. All comparisons are <strong>timestamp-based</strong>, not height-based:</p>
+  <ol style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li><strong>Monotony check</strong>: <code>B.timestamp > fsi.last_vote.timestamp</code> — the finalizer only ever votes on blocks strictly newer than its last vote. Failure here → abstain immediately (no vote emitted).</li>
+    <li><strong>Liveness check</strong>: <code>B.latest_qc_block_timestamp > fsi.lock.timestamp</code> — the QC embedded in B certifies a block more recent than the finalizer's current lock. If this passes, the finalizer <em>can</em> vote.</li>
+    <li><strong>Safety check</strong> (evaluated only when liveness fails): <code>B extends fsi.lock.block_id</code> — the proposed block is a direct ancestor-chain descendant of the locked block. If this passes, the finalizer can still vote, but <em>weakly</em>.</li>
+  </ol>
+  <p>If both liveness and safety fail, the finalizer abstains. Otherwise:</p>
+  <ul style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li><strong>Strong vote</strong>: liveness passed AND <code>fsi.last_vote.timestamp ≤ B.latest_qc_block_timestamp</code> (the embedded QC has caught up past the finalizer's last vote, AND the finalizer has not recently switched branches, OR any branch-switch has already been superseded by a newer QC).</li>
+    <li><strong>Weak vote</strong>: liveness passed but <code>fsi.last_vote.timestamp > B.latest_qc_block_timestamp</code>, OR liveness failed but safety passed, OR the finalizer recently switched branches and <code>fsi.other_branch_latest_time > B.latest_qc_block_timestamp</code>.</li>
+  </ul>
+  <p>On a strong vote, <code>fsi.lock</code> advances to the block referenced by B's QC claim, and <code>fsi.other_branch_latest_time</code> is cleared. On a weak vote (when switching branches), <code>fsi.other_branch_latest_time</code> is set to the timestamp of the previous branch's last vote, recording the branch-switch.</p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 740 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:740px;display:block;margin:0 auto;">
+      <defs>
+        <marker id="arr-grey"  markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/></marker>
+        <marker id="arr-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/></marker>
+        <marker id="arr-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ffa657"/></marker>
+        <marker id="arr-red"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#f78166"/></marker>
+      </defs>
+
+      <!-- ── START ──────────────────────────────────────────── -->
+      <ellipse cx="200" cy="22" rx="85" ry="17" fill="rgba(88,166,255,0.12)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="200" y="26" fill="#58a6ff" font-family="JetBrains Mono" font-size="11" text-anchor="middle">RECEIVE BLOCK B</text>
+
+      <!-- START → Monotony -->
+      <line x1="200" y1="39" x2="200" y2="63" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr-grey)"/>
+
+      <!-- ── CHECK 1: MONOTONY ──────────────────────────────── -->
+      <!-- diamond cx=200 cy=90 hw=110 hh=26  top:(200,64) right:(310,90) bottom:(200,116) left:(90,90) -->
+      <polygon points="200,64 310,90 200,116 90,90" fill="rgba(25,35,45,0.9)" stroke="#444d56" stroke-width="1.5"/>
+      <text x="200" y="87"  fill="#e6edf3" font-family="JetBrains Mono" font-size="9.5" text-anchor="middle">B.timestamp &gt;</text>
+      <text x="200" y="100" fill="#e6edf3" font-family="JetBrains Mono" font-size="9.5" text-anchor="middle">last_vote.timestamp?</text>
+
+      <!-- Monotony NO → ABSTAIN-1 -->
+      <line x1="310" y1="90" x2="318" y2="90" stroke="#f78166" stroke-width="1.5" marker-end="url(#arr-red)"/>
+      <text x="313" y="84" fill="#f78166" font-family="JetBrains Mono" font-size="9">NO</text>
+      <rect x="318" y="72" w="110" width="110" height="36" rx="5" fill="rgba(247,129,102,0.15)" stroke="#f78166" stroke-width="1.5"/>
+      <text x="373" y="94" fill="#f78166" font-family="Syne" font-size="12" font-weight="700" text-anchor="middle">ABSTAIN</text>
+
+      <!-- Monotony YES ↓ -->
+      <line x1="200" y1="116" x2="200" y2="158" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-green)"/>
+      <text x="210" y="141" fill="#3fb950" font-family="JetBrains Mono" font-size="9">YES</text>
+
+      <!-- ── CHECK 2: LIVENESS ──────────────────────────────── -->
+      <!-- diamond cx=200 cy=185 hw=110 hh=26  top:(200,159) right:(310,185) bottom:(200,211) left:(90,185) -->
+      <polygon points="200,159 310,185 200,211 90,185" fill="rgba(25,35,45,0.9)" stroke="#444d56" stroke-width="1.5"/>
+      <text x="200" y="182" fill="#e6edf3" font-family="JetBrains Mono" font-size="9.5" text-anchor="middle">QC.timestamp &gt;</text>
+      <text x="200" y="195" fill="#e6edf3" font-family="JetBrains Mono" font-size="9.5" text-anchor="middle">lock.timestamp?</text>
+      <text x="145" y="175" fill="#8b949e" font-family="JetBrains Mono" font-size="8" text-anchor="middle">(liveness)</text>
+
+      <!-- Liveness YES → S/W diamond -->
+      <line x1="310" y1="185" x2="428" y2="185" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-green)"/>
+      <text x="366" y="179" fill="#3fb950" font-family="JetBrains Mono" font-size="9">YES</text>
+
+      <!-- Liveness NO ↓ -->
+      <line x1="200" y1="211" x2="200" y2="241" stroke="#ffa657" stroke-width="1.5" marker-end="url(#arr-amber)"/>
+      <text x="210" y="230" fill="#ffa657" font-family="JetBrains Mono" font-size="9">NO</text>
+
+      <!-- ── CHECK 3: SAFETY (liveness-NO path) ─────────────── -->
+      <!-- diamond cx=200 cy=265 hw=95 hh=23  top:(200,242) right:(295,265) bottom:(200,288) left:(105,265) -->
+      <polygon points="200,242 295,265 200,288 105,265" fill="rgba(25,35,45,0.9)" stroke="#444d56" stroke-width="1.5"/>
+      <text x="200" y="269" fill="#e6edf3" font-family="JetBrains Mono" font-size="9.5" text-anchor="middle">B extends fsi.lock?</text>
+      <text x="200" y="282" fill="#8b949e" font-family="JetBrains Mono" font-size="7.5" text-anchor="middle">(safety check)</text>
+
+      <!-- Safety YES → WEAK VOTE box -->
+      <line x1="295" y1="265" x2="456" y2="265" stroke="#ffa657" stroke-width="1.5" marker-end="url(#arr-amber)"/>
+      <text x="373" y="259" fill="#ffa657" font-family="JetBrains Mono" font-size="9">YES</text>
+
+      <!-- Safety NO → ABSTAIN-2 -->
+      <line x1="105" y1="265" x2="97" y2="265" stroke="#f78166" stroke-width="1.5" marker-end="url(#arr-red)"/>
+      <text x="100" y="259" fill="#f78166" font-family="JetBrains Mono" font-size="9" text-anchor="middle">NO</text>
+      <rect x="7" y="249" width="90" height="32" rx="5" fill="rgba(247,129,102,0.15)" stroke="#f78166" stroke-width="1.5"/>
+      <text x="52" y="269" fill="#f78166" font-family="Syne" font-size="11" font-weight="700" text-anchor="middle">ABSTAIN</text>
+
+      <!-- ── CHECK 4: STRONG vs WEAK (liveness-YES path) ───── -->
+      <!-- diamond cx=520 cy=185 hw=90 hh=26  top:(520,159) right:(610,185) bottom:(520,211) left:(430,185) -->
+      <polygon points="520,159 610,185 520,211 430,185" fill="rgba(25,35,45,0.9)" stroke="#444d56" stroke-width="1.5"/>
+      <text x="520" y="182" fill="#e6edf3" font-family="JetBrains Mono" font-size="9.5" text-anchor="middle">last_vote.ts ≤</text>
+      <text x="520" y="195" fill="#e6edf3" font-family="JetBrains Mono" font-size="9.5" text-anchor="middle">QC.timestamp?</text>
+
+      <!-- S/W YES → STRONG VOTE -->
+      <line x1="610" y1="185" x2="618" y2="185" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-green)"/>
+      <text x="613" y="179" fill="#3fb950" font-family="JetBrains Mono" font-size="9">YES</text>
+      <rect x="618" y="167" width="115" height="36" rx="5" fill="rgba(63,185,80,0.15)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="675" y="189" fill="#3fb950" font-family="Syne" font-size="12" font-weight="700" text-anchor="middle">STRONG VOTE</text>
+
+      <!-- S/W NO ↓ → WEAK VOTE box (top) -->
+      <line x1="520" y1="211" x2="520" y2="243" stroke="#ffa657" stroke-width="1.5" marker-end="url(#arr-amber)"/>
+      <text x="530" y="231" fill="#ffa657" font-family="JetBrains Mono" font-size="9">NO</text>
+
+      <!-- ── WEAK VOTE box (shared by both S/W-NO and Safety-YES) -->
+      <rect x="456" y="243" width="128" height="36" rx="5" fill="rgba(255,166,87,0.15)" stroke="#ffa657" stroke-width="1.5"/>
+      <text x="520" y="265" fill="#ffa657" font-family="Syne" font-size="12" font-weight="700" text-anchor="middle">WEAK VOTE</text>
+    </svg>
+    <div class="diagram-label">Figure 7 — Finalizer voting decision tree (based on actual finalizer.cpp logic)</div>
+  </div>
+
+  <h3>The lock Update</h3>
+
+  <p>The <code>fsi.lock</code> pointer advances when a finalizer casts a <strong>strong vote</strong> and the block's embedded QC refers to a block more recent than the current lock. That QC-referenced block becomes the new locked block. This is exactly the <em>locking</em> in HotStuff's safety rule — a finalizer will only deviate from its lock when it sees a QC whose timestamp is higher than the lock's timestamp (the liveness check), which means a super-majority has already moved past the old lock.</p>
+
+  <h3>safety.dat and Crash Recovery</h3>
+  <p>The safety state is durably persisted to <code>&lt;data-dir&gt;/finalizers/safety.dat</code> on every vote. If this file is lost or corrupted, the finalizer <strong>must switch to a new BLS key</strong> — it cannot safely resume voting with the old key because it has no record of what it previously committed to, and reusing the key could cause it to vote on a conflicting branch.</p>
+
+  <div class="callout warn">
+    <div class="callout-title">⚠ Critical Operational Note</div>
+    Never reuse a BLS finalizer key between nodeos instances. Never run two instances with the same finalizer key simultaneously. A split-brain scenario (two nodes voting with the same key but different forks in memory) can cause safety violations that are detectable by the network as an equivocation proof.
+  </div>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="impl"><span class="section-num">§9</span>Implementation Deep Dive</h2>
+
+  <h3>The Finality Core (Spring / wire-sysio)</h3>
+  <p>The consensus logic in Spring lives primarily in <code>libraries/chain/</code> under the <code>finality/</code> subdirectory. Key files include:</p>
+
+  <table>
+    <thead>
+      <tr><th>File</th><th>Responsibility</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>finality_core.hpp/.cpp</code></td>
+        <td>Core finality state: tracks <code>high_qc</code>, <code>b_finality_violation</code>, 2-chain rule, LIB advancement</td>
+      </tr>
+      <tr>
+        <td><code>finalizer.hpp/.cpp</code></td>
+        <td>Per-finalizer vote logic: safety checks, vote type determination, BLS signing</td>
+      </tr>
+      <tr>
+        <td><code>finalizer_policy.hpp</code></td>
+        <td>Data structures: <code>finalizer_authority</code>, <code>finalizer_policy</code>, policy transitions</td>
+      </tr>
+      <tr>
+        <td><code>qc_chain.hpp/.cpp</code></td>
+        <td>QC aggregation: collects incoming votes, aggregates BLS signatures, produces QCs</td>
+      </tr>
+      <tr>
+        <td><code>vote_message.hpp</code></td>
+        <td>Network message: signed vote broadcast by finalizer nodes</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Vote Threading Model</h3>
+  <p>Savanna introduces a dedicated thread pool for vote processing, controlled by <code>vote-threads</code> in <code>config.ini</code> (recommended: 4 for BP nodes). This is critical for performance: incoming vote messages from peers must be validated (BLS verification), accumulated, and then potentially trigger QC formation — all without blocking the main block processing pipeline.</p>
+
+  <pre><span class="cm">// vote-threads = 4  in config.ini</span>
+<span class="cm">// Each thread handles vote verification and accumulation</span>
+<span class="cm">// The main controller thread handles block application</span>
+<span class="cm">// After quorum, vote thread posts QC back to controller</span>
+
+<span class="cm">// In plugin_impl (net_plugin.cpp) -- from wire-sysio:</span>
+<span class="kw">void</span> <span class="ty">process_vote_message</span>(<span class="ty">const</span> <span class="ty">vote_message&amp;</span> msg) {
+    <span class="cm">// 1. Verify BLS signature (~1.1ms)</span>
+    <span class="kw">if</span> (!verify_bls_vote(msg)) <span class="kw">return</span>;
+    <span class="cm">// 2. Accumulate into pending QC for msg.block_id</span>
+    <span class="kw">auto</span> qc = vote_accumulator.add_vote(msg);
+    <span class="cm">// 3. If quorum reached, post QC to controller</span>
+    <span class="kw">if</span> (qc.has_value()) post_qc_to_controller(*qc);
+}</pre>
+
+  <h3>Block Header Extension: instant_finality_extension</h3>
+  <p>Every Savanna block carries an <code>instant_finality_extension</code> in its block header extensions. This is how QCs propagate: when a proposer receives enough votes to form a QC for the previous block, it includes that QC in the next block's header. Any node receiving the block can immediately verify the QC and advance its view of finality.</p>
+
+  <pre><span class="cm">// Antelope Spring: finality data carried as a block header extension
+// (required for backward compatibility with existing block format)
+// In wire-sysio this data is a native field of the block structure itself</span>
+<span class="kw">struct</span> <span class="ty">instant_finality_extension</span> : <span class="kw">public</span> <span class="ty">fc::reflect_init</span> {
+    <span class="ty">std::optional&lt;quorum_certificate&gt;</span>   qc;        <span class="cm">// QC on parent block</span>
+    <span class="ty">std::optional&lt;finalizer_policy&gt;</span>     new_finalizer_policy;  <span class="cm">// policy change</span>
+    <span class="ty">std::optional&lt;proposer_policy&gt;</span>      new_proposer_policy;   <span class="cm">// BP schedule change</span>
+    <span class="ty">qc_claim_t</span>                          last_qc_claim;  <span class="cm">// pointer to highest known QC</span>
+};</pre>
+
+  <h3>Finality Digest and Merkle Proofs</h3>
+  <p>Savanna introduces a <strong>finality digest</strong> — a Merkle root over a sequence of <em>block references</em> (block_id, parent_id, timestamp) from the LIB up to the current block. This <code>reversible_blocks_root</code> allows construction of cryptographic proofs that a specific block is in the finalized chain, which is the foundation for trustless IBC and state proofs.</p>
+
+  <pre><span class="cm">// The finality digest commits to the reversible block history</span>
+<span class="cm">// reversible_blocks_root = Merkle(block_ref₀, ..., block_refₙ)</span>
+<span class="cm">// This root is included in the finality digest of each block</span>
+<span class="cm">// enabling compact inclusion proofs for IBC</span></pre>
+
+
+  <h3 id="fork-selection">Fork Database &amp; Chain Selection</h3>
+  <p>The <code>fork_database</code> is the in-memory store that tracks all known chain tips and determines which chain a node considers "best" — the one it will attempt to extend next. Under Savanna, the selection criterion is radically different from the legacy rule.</p>
+
+  <p>The multi-index container inside <code>fork_database_impl</code> maintains a <code>by_best_branch</code> index whose comparator is the entire definition of "best chain." The two versions side by side:</p>
+
+  <pre><span class="cm">// ── Savanna (block_state) ────────────────────────────────────────────────────
+// Primary:   latest_qc_block_timestamp  DESC  → most-recently-QC'd chain wins
+// Secondary: timestamp                  DESC  → most recent block, if QC tied
+// Tertiary:  block_id                   DESC  → deterministic hash tiebreak</span>
+<span class="kw">using</span> <span class="ty">by_best_branch_if_t</span> = <span class="ty">ordered_unique</span>&lt;
+   <span class="ty">tag</span>&lt;<span class="ty">by_best_branch</span>&gt;,
+   <span class="ty">composite_key</span>&lt;<span class="ty">block_state</span>,
+      <span class="ty">const_mem_fun</span>&lt;<span class="ty">block_state</span>, <span class="ty">block_timestamp_type</span>, &amp;<span class="ty">block_state</span>::<span class="ty">latest_qc_block_timestamp</span>&gt;,
+      <span class="ty">const_mem_fun</span>&lt;<span class="ty">block_state</span>, <span class="ty">block_timestamp_type</span>, &amp;<span class="ty">block_state</span>::<span class="ty">timestamp</span>&gt;,
+      <span class="ty">const_mem_fun</span>&lt;<span class="ty">block_state</span>, <span class="kw">const</span> <span class="ty">block_id_type</span>&amp;, &amp;<span class="ty">block_state</span>::<span class="ty">id</span>&gt;&gt;,
+   <span class="ty">composite_key_compare</span>&lt;<span class="ty">std::greater</span>&lt;<span class="ty">block_timestamp_type</span>&gt;,
+                          <span class="ty">std::greater</span>&lt;<span class="ty">block_timestamp_type</span>&gt;,
+                          <span class="ty">std::greater</span>&lt;<span class="ty">block_id_type</span>&gt;&gt;&gt;;
+
+<span class="cm">// ── Legacy DPoS (block_state_legacy) ────────────────────────────────────────
+// Primary:   irreversible_blocknum  DESC  → chain with most LIB wins
+// Secondary: block_num              DESC  → longest chain, if LIB tied
+// Tertiary:  block_id               DESC  → deterministic tiebreak</span>
+<span class="kw">using</span> <span class="ty">by_best_branch_legacy_t</span> = <span class="ty">ordered_unique</span>&lt;
+   <span class="ty">tag</span>&lt;<span class="ty">by_best_branch</span>&gt;,
+   <span class="ty">composite_key</span>&lt;<span class="ty">block_state_legacy</span>,
+      <span class="ty">const_mem_fun</span>&lt;<span class="ty">block_state_legacy</span>, <span class="ty">uint32_t</span>, &amp;<span class="ty">block_state_legacy</span>::<span class="ty">irreversible_blocknum</span>&gt;,
+      <span class="ty">const_mem_fun</span>&lt;<span class="ty">block_state_legacy</span>, <span class="ty">uint32_t</span>, &amp;<span class="ty">block_state_legacy</span>::<span class="ty">block_num</span>&gt;,
+      <span class="ty">const_mem_fun</span>&lt;<span class="ty">block_state_legacy</span>, <span class="kw">const</span> <span class="ty">block_id_type</span>&amp;, &amp;<span class="ty">block_state_legacy</span>::<span class="ty">id</span>&gt;&gt;,
+   <span class="ty">composite_key_compare</span>&lt;<span class="ty">std::greater</span>&lt;<span class="ty">uint32_t</span>&gt;,
+                          <span class="ty">std::greater</span>&lt;<span class="ty">uint32_t</span>&gt;,
+                          <span class="ty">std::greater</span>&lt;<span class="ty">block_id_type</span>&gt;&gt;&gt;;</pre>
+
+  <h4>Why lqcTs is the Primary Key</h4>
+  <p>Under legacy DPoS, the fork choice rule is identical to Nakamoto-style "longest chain wins" (modulo the LIB refinement). A fork with more blocks always beats one with fewer, regardless of how recently either chain was confirmed by BPs. This is safe under DPoS's asynchronous finality model but meaningless under Savanna where a 1-second QC is a hard cryptographic proof of agreement.</p>
+
+  <p>Under Savanna, the primary key is <code>latest_qc_block_timestamp</code> — the timestamp of the most recent block that has a valid QC embedded in the chain leading up to the current tip. This has a precise meaning in the safety model: a chain with a higher <code>lqcTs</code> has more recently demonstrated a two-thirds supermajority agreement. Preferring that chain means honest nodes naturally converge to the branch where the most finalizers have locked in. A longer chain with a <em>stale</em> QC is explicitly disfavoured.</p>
+
+  <p>The secondary key is <code>timestamp</code> — the block's slot timestamp. Block timestamps in Antelope/Wire are not wall-clock times; they are deterministic slot identifiers spaced exactly 500ms apart. A block at slot <em>N</em> always has the same timestamp regardless of when within that slot the BP actually produced it. Among tips with identical <code>lqcTs</code> values, a higher timestamp simply means the chain has advanced to a later slot — it has more blocks built on top of the same finalized base. The node prefers the chain that has made more progress, which is the natural extension of the "most certified" primary criterion.</p>
+
+  <p>The tertiary key is <code>block_id</code>, the block hash. This is a purely deterministic tiebreak to ensure all nodes with the same view of the fork database agree on the same best tip, preventing non-deterministic divergence when two tips are otherwise equal.</p>
+
+  <h4>Interaction with the Finalizer Voting Rules</h4>
+  <p>The fork selection rule and the finalizer voting rules are designed to be consistent. When an honest node's fork database switches its best branch — because a new block arrives with a higher <code>latest_qc_block_timestamp</code> — that is exactly the event that may trigger a branch switch in the finalizer. Before the finalizer votes on the new branch, it records <code>other_branch_latest_time = fsi.last_vote.timestamp</code>. This prevents the finalizer from immediately issuing a strong vote on the new branch until the new branch's QC has "caught up" past the switch point, which is the R4 condition B∧C in the voting logic.</p>
+
+  <p>The result is a self-consistent system: the fork database tells the node <em>which chain to extend</em>, and the finalizer safety rules tell it <em>how strongly to endorse it</em>. A chain cannot win the fork choice race without eventually accumulating enough strong votes to form a strong QC, which in turn advances its <code>lqcTs</code> to further solidify its lead in the fork database.</p>
+
+  <h4>Fork Switch Detection</h4>
+  <p>Every time a block is inserted via <code>add_impl</code>, the method returns a <code>fork_db_add_t</code> value describing what happened to the chain head:</p>
+
+  <pre><span class="kw">enum class</span> <span class="ty">fork_db_add_t</span> {
+    <span class="ty">duplicate</span>,          <span class="cm">// block already present, ignored</span>
+    <span class="ty">appended_to_head</span>,   <span class="cm">// new block extends current head directly</span>
+    <span class="ty">fork_switch</span>,        <span class="cm">// new block IS new head but parent ≠ old head → reorg</span>
+    <span class="ty">added</span>,              <span class="cm">// block added but did not become new head</span>
+};</pre>
+
+  <p>The fork switch condition is precise: the new block becomes the <code>by_best_branch</code> index front (the new head), but its <code>previous()</code> is not the old head. This means a chain reorganisation is required. The caller — <code>controller</code> — uses the <code>fork_switch</code> return value to trigger <code>fetch_branch_from</code>, which walks both tips back through the index until their <code>previous()</code> values match, finding the common ancestor. The blocks on the old branch are unapplied and the blocks on the new branch are applied in order. Because the fork choice primary key is <code>latest_qc_block_timestamp</code>, a fork switch can only happen when the incoming chain has a more recent QC — there is no way for a longer-but-less-certified chain to trigger a reorg under Savanna's rules.</p>
+
+  <h4>Pending LIB from QC Carrier</h4>
+  <p>The most subtle part of <code>add_impl</code> is how <code>pending_savanna_lib_id</code> is advanced. When a new <code>block_state_ptr</code> is added and its embedded QC claim is strong, the code immediately advances the pending LIB — <em>before</em> the block itself is validated:</p>
+
+  <pre><span class="kw">if constexpr</span> (<span class="ty">std::is_same_v</span>&lt;<span class="ty">BSP</span>, <span class="ty">block_state_ptr</span>&gt;) {
+   <span class="kw">auto</span> qc_claim = n-&gt;extract_qc_claim();
+   <span class="kw">if</span> (qc_claim.is_strong_qc) {
+      <span class="ty">block_num_type</span> current_lib = <span class="ty">block_header</span>::num_from_id(pending_savanna_lib_id);
+      <span class="kw">if</span> (qc_claim.block_num &gt; current_lib) {
+         <span class="cm">// claim has already been verified, update LIB even if unable to verify block.
+         // The block is just acting as a network message / carrier for this data.
+         // It doesn't matter if the block is actually valid or forked out.</span>
+         <span class="kw">if</span> (<span class="kw">auto</span> claimed = search_on_branch_impl(n-&gt;previous(), qc_claim.block_num, include_root_t::no)) {
+            <span class="kw">auto</span>&amp; ref = claimed-&gt;core.get_block_reference(claimed-&gt;core.latest_qc_claim().block_num);
+            set_pending_savanna_lib_id_impl(ref.block_id);
+         }
+      }
+   }
+}</pre>
+
+  <p>This is safe because the QC claim has already been verified cryptographically (BLS signature checked) before <code>add_impl</code> is called. A valid strong QC is a proof that two-thirds of the finalizer set voted for that block — that proof is independent of whether the block carrying it is itself the best tip, or even a valid block at all. The carrier block might later be found invalid or forked out; the QC information it transported is still genuine. <code>pending_savanna_lib_id</code> only ever moves forward (the <code>set_pending_savanna_lib_id_impl</code> guard: <code>new_lib > old_lib</code>), so an invalid carrier can advance LIB at most once and cannot retract it.</p>
+
+  <h4>Root Advancement and Branch Pruning</h4>
+  <p>When <code>pending_savanna_lib_id</code> is confirmed and the pending LIB block becomes the new tree root, <code>advance_root_impl</code> runs a two-phase pruning pass. First, it walks backward from the new root to the old root, collecting block IDs into a removal queue. Then it erases the new root from the index <em>individually</em> — without cascading — because the new root's children must stay in the index. All ancestor blocks are then removed via <code>remove_impl</code>, which cascades breadth-first through <code>by_prev</code> to also eliminate any orphaned branches that were attached to those ancestors.</p>
+
+  <p>One implementation detail worth noting: the block state object for the old blocks is never mutated. The comment in the code is explicit — other parts of the system may hold shared pointers to these block states and access them asynchronously (e.g., the read-only transaction thread pool), so clearing the <code>block</code> shared pointer or other fields would introduce a data race. The fork database simply removes its own index entry and lets reference counting handle deallocation.</p>
+
+  <h4>Dual Fork Database and the Legacy Transition</h4>
+  <p>During the Savanna activation window a node may need to maintain two fork databases simultaneously — one tracking the legacy DPoS chain and one tracking the emerging Savanna chain. The <code>fork_database</code> outer class manages this with an <code>in_use</code> atomic flag:</p>
+
+  <pre><span class="kw">enum class</span> <span class="ty">in_use_t</span> { <span class="ty">legacy</span>, <span class="ty">both</span>, <span class="ty">savanna</span> };</pre>
+
+  <p>The transition path is <code>legacy</code> → <code>both</code> → <code>savanna</code>, driven by <code>switch_from_legacy</code>. When the Savanna activation block is first seen, <code>fork_db_s</code> is reset to that block as root while <code>fork_db_l</code> remains active — state is <code>both</code>. Once the legacy fork database is no longer needed, the state moves to <code>savanna</code>. The legacy <code>fork_db_l</code> is never explicitly deleted at transition time: threads may be blocked on its mutex or holding references to its block states, so it persists until process exit.</p>
+
+  <p>The persistent file format encodes this state. Version 1 files contain only a legacy fork database. Version 3 files (Spring 1.0.1+) contain an <code>in_use</code> tag followed by zero, one, or two fork databases depending on which were active. Version 2 (Spring 1.0.0) is explicitly rejected by the parser — the comment states it is "unsupported by Spring 1.0.1 and above" — so an operator upgrading from Spring 1.0.0 must let the node rebuild its fork database from scratch rather than reading a v2 file.</p>
+
+  <h4>pending_savanna_lib_id</h4>
+  <p>The <code>pending_savanna_lib_id</code> field is strictly monotone-increasing: <code>set_pending_savanna_lib_id_impl</code> only writes a new value when its block number exceeds the current one. This makes it safe to call from multiple code paths — the QC carrier path in <code>add_impl</code>, the direct <code>set_pending_savanna_lib_id</code> call from <code>finality_core</code>, and any future path — without risk of LIB regressing. At persistence time the field is written as the first entry in the serialised fork database so that on reload, LIB state is restored before any block entries are processed.
+
+  <h3>Wire Network Differences</h3>
+  <p>Wire Network launched as a new chain rather than a protocol upgrade to an existing one. This is a meaningful distinction: there was no legacy block format to remain compatible with, no pre-Savanna history on-chain, and no existing node operators running software that couldn't handle a clean block structure. As a result, Wire could integrate Savanna's finality data directly into the block format as a first-class field rather than shoe-horning it into an extension mechanism. This makes the block structure simpler, more readable, and avoids the overhead and parsing complexity of the extension indirection that Spring requires for backward compatibility with EOS.</p>
+
+  <p>Beyond that structural difference, <code>wire-sysio</code> diverges from Antelope Spring in several additional areas reflecting Wire's independent evolution from the fork point:</p>
+
+  <table>
+    <thead>
+      <tr><th>Area</th><th>Antelope Spring</th><th>wire-sysio</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Finality data placement</strong></td>
+        <td>Carried as an <code>instant_finality_extension</code> block header extension — required for backward compatibility with the existing block format</td>
+        <td>Finality data is a native first-class field of the block structure; no extension mechanism needed</td>
+      </tr>
+      <tr>
+        <td><strong>System contract actions</strong></td>
+        <td><code>regfinkey</code> / <code>actfinkey</code> / <code>switchtosvnn</code> on the <code>eosio</code> system contract</td>
+        <td>Same action pattern but on the <code>sysio</code> system contract</td>
+      </tr>
+      <tr>
+        <td><strong>Net plugin / P2P</strong></td>
+        <td>Spring's <code>net_plugin.cpp</code> with original notice/request message protocol</td>
+        <td>Wire PR #205 replaces the notice/request protocol with new message types; a significant P2P overhaul ongoing at fork time</td>
+      </tr>
+      <tr>
+        <td><strong>CDT host functions</strong></td>
+        <td>BLS host functions exposed via <code>wire-cdt</code> (Antelope CDT fork)</td>
+        <td>Wire CDT (<code>wire-cdt</code>) carries the same BLS intrinsics; additional cryptographic host functions under review in PR #33</td>
+      </tr>
+      <tr>
+        <td><strong>Safety file path</strong></td>
+        <td><code>&lt;data-dir&gt;/finalizers/safety.dat</code></td>
+        <td>Same path and format; the <code>finalizer-dir</code> config option allows overriding the directory</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>For the most part the core finality state machine — <code>finality_core</code>, <code>finalizer</code>, <code>finalizer_policy</code>, QC aggregation, BLS key registration, and <code>vote-threads</code> configuration — is functionally identical between the two codebases at the time of the Spring v1.0 fork.</p>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="ibc"><span class="section-num">§10</span>IBC &amp; Cross-Chain Implications</h2>
+
+  <p>Savanna's 1-second finality makes cross-chain communication between Antelope chains significantly more practical. A finality proof — the aggregate BLS QC, a Merkle inclusion path over the reversible_blocks_root, and an action Merkle proof — can be submitted to a verifier contract on a destination chain. Because the CDT exposes BLS host functions, that contract can cryptographically validate the entire proof that a specific action was finalized on the source chain, enabling trust-minimized cross-chain messaging and asset bridging.</p>
+
+  <div class="diagram-container">
+    <svg viewBox="0 0 760 172" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:760px;display:block;margin:0 auto;">
+      <!-- Chain A -->
+      <rect x="20" y="30" width="160" height="80" rx="6" fill="rgba(88,166,255,0.08)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="100" y="62" fill="#58a6ff" font-family="Syne" font-size="14" font-weight="600" text-anchor="middle">Chain A</text>
+      <text x="100" y="80" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">Lock token TX</text>
+      <text x="100" y="94" fill="#3fb950" font-family="JetBrains Mono" font-size="10" text-anchor="middle">finalized: ~1s</text>
+
+      <!-- Arrow with finality proof -->
+      <rect x="210" y="55" width="120" height="30" rx="4" fill="rgba(30,40,50,0.8)" stroke="#30363d" stroke-width="1"/>
+      <text x="270" y="68" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">Finality Proof</text>
+      <text x="270" y="80" fill="#8b949e" font-family="JetBrains Mono" font-size="9" text-anchor="middle">Merkle + QC</text>
+      <line x1="180" y1="70" x2="208" y2="70" stroke="#e3b341" stroke-width="1.5"/>
+      <line x1="330" y1="70" x2="358" y2="70" stroke="#e3b341" stroke-width="1.5" marker-end="url(#fa)"/>
+
+      <!-- Chain B -->
+      <rect x="360" y="30" width="160" height="80" rx="6" fill="rgba(63,185,80,0.08)" stroke="#3fb950" stroke-width="1.5"/>
+      <text x="440" y="62" fill="#3fb950" font-family="Syne" font-size="14" font-weight="600" text-anchor="middle">Chain B</text>
+      <text x="440" y="80" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">Verify proof</text>
+      <text x="440" y="94" fill="#8b949e" font-family="JetBrains Mono" font-size="10" text-anchor="middle">Mint token</text>
+
+      <!-- Timing bar -->
+      <rect x="20" y="125" width="220" height="16" rx="3" fill="rgba(247,129,102,0.12)" stroke="#f78166" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="130" y="137" fill="#f78166" font-family="JetBrains Mono" font-size="9" text-anchor="middle">Legacy: wait ~3min before safe action</text>
+
+      <rect x="20" y="149" width="148" height="16" rx="3" fill="rgba(63,185,80,0.12)" stroke="#3fb950" stroke-width="1"/>
+      <text x="94" y="161" fill="#3fb950" font-family="JetBrains Mono" font-size="9" text-anchor="middle">Savanna: ~1s finality</text>
+
+      <!-- Conceptual note -->
+      <text x="560" y="45" fill="#e6edf3" font-family="Syne" font-size="13" font-weight="600">Conceptual Flow</text>
+      <text x="560" y="63" fill="#8b949e" font-family="JetBrains Mono" font-size="10">QC + Merkle proof submitted</text>
+      <text x="560" y="77" fill="#8b949e" font-family="JetBrains Mono" font-size="10">to verifier contract on Chain B</text>
+    </svg>
+    <div class="diagram-label">Figure 8 — Conceptual IBC flow enabled by Savanna finality proofs</div>
+  </div>
+
+
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="future"><span class="section-num">§11</span>Future Directions</h2>
+
+  <h3>Full Decoupling of Proposers and Finalizers</h3>
+  <p>Spring v1.0 sets the architectural stage for separating proposer and finalizer roles into distinct node types. Currently all 21 BPs serve as both proposers and finalizers. A future upgrade could allow:</p>
+  <ul style="margin-bottom:18px; padding-left:24px; line-height:2.2;">
+    <li><strong>N proposers</strong> (potentially a different set than today's 21 BPs, focused on throughput).</li>
+    <li><strong>M finalizers</strong> (a potentially larger, lighter-weight set focused on signing speed).</li>
+    <li>Because QC size is O(1) regardless of finalizer set size, increasing M does not harm performance.</li>
+  </ul>
+
+  <h3>ZK Proofs and Confidential Transactions</h3>
+  <p>BLS12-381 is a pairing-friendly curve that is well-suited for use as the inner curve in <strong>Groth16</strong> and <strong>PLONK</strong> ZK proof systems. By exposing BLS operations as host functions and building the finality system on this curve, Spring lays the groundwork for ZK-based applications, including private transactions and compact validity proofs for cross-chain communication.</p>
+
+  <h3>Academic Publication</h3>
+  <p>The Savanna team has referenced a forthcoming academic paper that will provide formal proofs of the safety and liveness properties. This will be particularly significant for the research community, as Savanna represents a genuine contribution to BFT consensus design — specifically in how the strong/weak vote distinction elegantly addresses the prefix speculation dilemma that challenges other HotStuff variants.</p>
+
+  <!-- ─────────────────────────────────────────── -->
+  <h2 id="comparison"><span class="section-num">§12</span>Protocol Comparison</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>Legacy EOS DPoS+BFT</th>
+        <th>Savanna (Spring v1+)</th>
+        <th>Ethereum PoS</th>
+        <th>Tendermint/CometBFT</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Time to Finality</td>
+        <td><span class="pill pill-red">~3 min</span></td>
+        <td><span class="pill pill-green">~1 second</span></td>
+        <td><span class="pill pill-purple">~12 min</span></td>
+        <td><span class="pill pill-blue">~6 seconds</span></td>
+      </tr>
+      <tr>
+        <td>Finality Type</td>
+        <td>Probabilistic → Algorithmic</td>
+        <td>Algorithmic (instant)</td>
+        <td>Probabilistic → Algorithmic</td>
+        <td>Algorithmic</td>
+      </tr>
+      <tr>
+        <td>BFT Threshold</td>
+        <td>&lt;1/3 BPs corrupt</td>
+        <td>&lt;1/3 finalizers corrupt</td>
+        <td>&lt;1/3 stake malicious</td>
+        <td>&lt;1/3 validators malicious</td>
+      </tr>
+      <tr>
+        <td>Signature Scheme</td>
+        <td>ECDSA (K1)</td>
+        <td>BLS12-381 aggregate</td>
+        <td>BLS12-381 aggregate</td>
+        <td>Ed25519</td>
+      </tr>
+      <tr>
+        <td>Message Complexity</td>
+        <td>O(n) header fields</td>
+        <td>O(n) votes → O(1) QC</td>
+        <td>O(n) attestations</td>
+        <td>O(n²) traditional / O(n) with BLS</td>
+      </tr>
+      <tr>
+        <td>Block Time</td>
+        <td>0.5s</td>
+        <td>0.5s</td>
+        <td>12s slots</td>
+        <td>Variable (~1-6s)</td>
+      </tr>
+      <tr>
+        <td>IBC / Bridge Friendly</td>
+        <td><span class="pill pill-red">No (3min wait)</span></td>
+        <td><span class="pill pill-green">Yes (instant proofs)</span></td>
+        <td><span class="pill pill-purple">Partial (long wait)</span></td>
+        <td><span class="pill pill-blue">Yes</span></td>
+      </tr>
+      <tr>
+        <td>Formal Safety Proof</td>
+        <td>Informal</td>
+        <td>Yes (paper forthcoming)</td>
+        <td>Casper FFG proof</td>
+        <td>Tendermint proof</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr>
+
+  <h2 style="border-top:none; margin-top:0;"><span class="section-num">Summary</span>What Makes Savanna Novel</h2>
+
+  <p>Savanna is not a simple port of HotStuff onto an existing chain — it solves a genuinely hard problem: how do you retrofit a running, high-throughput DPoS chain with a modern BFT finality layer without breaking the existing block production economics, key management, or validator participation model?</p>
+
+  <p>The key innovations that differentiate it from a vanilla HotStuff deployment are:</p>
+
+  <ol style="margin-bottom:18px; padding-left:24px; line-height:2.4;">
+    <li><strong>Strong/weak vote duality</strong>: Handles liveness after forks elegantly without adding a third chain phase, enabling genuine 2-block (1-second) finality.</li>
+    <li><strong>QC embedding in existing block headers</strong>: Via the <code>instant_finality_extension</code>, Savanna finality is self-contained in the block structure — no separate finality gossip layer required.</li>
+    <li><strong>Reversible blocks root (Merkle finality digest)</strong>: Enables compact, on-chain-verifiable finality proofs without a full block header relay — the cryptographic foundation needed for any future trustless IBC implementation.</li>
+    <li><strong>Separation of proposer and finalizer policies</strong>: Allows the validator set sizes and governance to evolve independently, a significant scalability advantage.</li>
+    <li><strong>BLS12-381 with threshold aggregation</strong>: O(1) QC size regardless of finalizer set, verified in ~1.1ms, unlocking the path to ZK-based privacy features.</li>
+  </ol>
+
+  <p>For the Wire Network and other Antelope forks adopting this consensus, the practical implication is a blockchain that behaves like web2 infrastructure in terms of settlement latency, while maintaining the full BFT safety guarantees expected of a high-value permissionless network.</p>
+
+  <div class="callout success">
+    <div class="callout-title">✓ Implementation Note for wire-sysio</div>
+    The <code>wire-sysio</code> codebase inherits the Savanna consensus implementation from the Antelope Spring fork. The finalizer keys, QC aggregation, vote threading, and safety.dat persistence work identically. The BLS host functions are accessible from WASM contracts via the CDT interface. Finalizer policy governance is managed through the <code>sysio</code> system contract using the same <code>regfinkey</code> / <code>actfinkey</code> / <code>switchtosvnn</code> action pattern.
+  </div>
+
+</div>
+
+<footer>
+  <p>Technical article compiled from Antelope Spring v1.0 release notes, EOS Network Foundation deep-dive content, AntelopeIO/spring and Wire-Network/wire-sysio GitHub repositories, and HotStuff academic literature. · Research: March 2026</p>
+</footer>
+
+</body>
+</html>
