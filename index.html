@@ -1,14 +1,172 @@
 <!DOCTYPE html>
-<html>
-<head><title>Savanna Documentation</title>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Savanna Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-body { font-family: sans-serif; max-width: 600px; margin: 80px auto; }
-a { display: block; font-size: 1.2em; margin: 1em 0; }
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --accent5: #ffa657;
+    --gold: #e3b341;
+    --glow: rgba(88,166,255,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Spectral', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 17px;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #0a1628 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 40px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(88,166,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    opacity: 0.9;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #e6edf3 0%, var(--accent) 60%, var(--accent4) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .hero-subtitle {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-style: italic;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 40px;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  @media (max-width: 640px) {
+    .cards { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 32px;
+    text-decoration: none;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 24px var(--glow);
+    transform: translateY(-2px);
+  }
+
+  .card-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .card:first-child .card-eyebrow { color: var(--accent); }
+  .card:last-child .card-eyebrow { color: var(--accent2); }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .card-desc {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .card-arrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    margin-top: auto;
+    padding-top: 8px;
+  }
 </style>
 </head>
 <body>
-<h1>Savanna Documentation</h1>
-<a href="savanna_consensus.html">Savanna Consensus</a>
-<a href="savanna_proofs.html">Savanna Proofs</a>
+  <div class="hero">
+    <div class="hero-eyebrow">Technical Documentation</div>
+    <h1>Savanna</h1>
+    <p class="hero-subtitle">Deep technical documentation on the Savanna consensus algorithm and its proof system</p>
+  </div>
+  <div class="content">
+    <div class="cards">
+      <a href="savanna_consensus.html" class="card">
+        <div class="card-eyebrow">Part I</div>
+        <div class="card-title">Consensus</div>
+        <div class="card-desc">A deep technical dive into the Savanna consensus mechanism &mdash; block production, BFT finality, the 2-chain rule, and vote aggregation.</div>
+        <div class="card-arrow">Read &rarr;</div>
+      </a>
+      <a href="savanna_proofs.html" class="card">
+        <div class="card-eyebrow">Part II</div>
+        <div class="card-title">Proofs</div>
+        <div class="card-desc">How Savanna constructs and verifies cryptographic proofs &mdash; finality proofs, action proofs, and the Merkle structures that underpin IBC.</div>
+        <div class="card-arrow">Read &rarr;</div>
+      </a>
+    </div>
+  </div>
 </body>
 </html>
